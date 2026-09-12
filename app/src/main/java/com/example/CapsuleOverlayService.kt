@@ -96,7 +96,7 @@ class CapsuleOverlayService : Service() {
             launch {
                 CapsuleStateManager.currentState.collect { state ->
                     val view = composeView ?: return@collect
-                    val params = view.layoutParams as WindowManager.LayoutParams
+                    val params = view.layoutParams as? WindowManager.LayoutParams ?: return@collect
                     var changed = false
                     
                     if (state == CapsuleState.EXPANDED_MEDIA || state == CapsuleState.EXPANDED_NOTIFICATION) {
@@ -115,7 +115,7 @@ class CapsuleOverlayService : Service() {
             launch {
                 CapsuleStateManager.capsuleXOffset.collect { xOffset ->
                     val view = composeView ?: return@collect
-                    val params = view.layoutParams as WindowManager.LayoutParams
+                    val params = view.layoutParams as? WindowManager.LayoutParams ?: return@collect
                     val pxOffset = (xOffset * resources.displayMetrics.density).toInt()
                     if (params.x != pxOffset) {
                         params.x = pxOffset
@@ -126,7 +126,7 @@ class CapsuleOverlayService : Service() {
             launch {
                 CapsuleStateManager.capsuleYOffset.collect { yOffset ->
                     val view = composeView ?: return@collect
-                    val params = view.layoutParams as WindowManager.LayoutParams
+                    val params = view.layoutParams as? WindowManager.LayoutParams ?: return@collect
                     val pyOffset = (yOffset * resources.displayMetrics.density).toInt()
                     if (params.y != pyOffset) {
                         params.y = pyOffset

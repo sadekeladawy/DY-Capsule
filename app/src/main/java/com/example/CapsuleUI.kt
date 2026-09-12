@@ -132,7 +132,8 @@ fun MainIsland(
         else -> idleCornerRadius.dp
     }
 
-    val animatedCorner = remember { Animatable(cornerRadius, Dp.VectorConverter) }
+    var currentWidth by remember { mutableStateOf(targetWidth) }
+    var currentHeight by remember { mutableStateOf(targetHeight) }
 
     DisposableEffect(targetWidth, targetHeight) {
         val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
@@ -141,17 +142,24 @@ fun MainIsland(
             val pxTargetWidth = with(density) { targetWidth.toPx() }.toInt()
             val pxTargetHeight = with(density) { targetHeight.toPx() }.toInt()
             
-            val startWidth = if (params.width > 0) params.width else pxTargetWidth
-            val startHeight = if (params.height > 0) params.height else pxTargetHeight
+            // If it's MATCH_PARENT or WRAP_CONTENT, use the current Compose size as start
+            val startWidth = if (params.width > 0) params.width else with(density) { currentWidth.toPx() }.toInt()
+            val startHeight = if (params.height > 0) params.height else with(density) { currentHeight.toPx() }.toInt()
 
             val animator = ValueAnimator.ofFloat(0f, 1f).apply {
                 duration = 400
                 interpolator = OvershootInterpolator(0.8f)
                 addUpdateListener { anim ->
                     val fraction = anim.animatedFraction
-                    params.width = (startWidth + (pxTargetWidth - startWidth) * fraction).toInt()
-                    params.height = (startHeight + (pxTargetHeight - startHeight) * fraction).toInt()
+                    val newPxWidth = (startWidth + (pxTargetWidth - startWidth) * fraction).toInt()
+                    val newPxHeight = (startHeight + (pxTargetHeight - startHeight) * fraction).toInt()
+                    
+                    params.width = newPxWidth
+                    params.height = newPxHeight
                     windowManager.updateViewLayout(view, params)
+                    
+                    currentWidth = with(density) { newPxWidth.toDp() }
+                    currentHeight = with(density) { newPxHeight.toDp() }
                 }
                 start()
             }
@@ -163,6 +171,8 @@ fun MainIsland(
             onDispose { }
         }
     }
+
+    val animatedCorner = remember { Animatable(cornerRadius, Dp.VectorConverter) }
 
     LaunchedEffect(cornerRadius) {
         animatedCorner.animateTo(
@@ -191,7 +201,7 @@ fun MainIsland(
 
     Box(
         modifier = Modifier
-            .fillMaxSize()
+            .size(currentWidth, currentHeight)
             .shadow(
                 elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner.value),
