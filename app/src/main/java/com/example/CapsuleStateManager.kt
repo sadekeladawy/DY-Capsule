@@ -38,6 +38,14 @@ object CapsuleStateManager {
 
     private var eventJob: Job? = null
 
+    fun expand() {
+        if (_currentState.value == CapsuleState.MEDIA_PLAYING || _mediaInfo.value.isPlaying) {
+            setState(CapsuleState.EXPANDED_MEDIA)
+        } else if (_currentState.value == CapsuleState.NOTIFICATION_POPUP || _notificationInfo.value != null) {
+            setState(CapsuleState.EXPANDED_NOTIFICATION)
+        }
+    }
+
     fun setState(state: CapsuleState) {
         if (_currentState.value == CapsuleState.CHARGING_EVENT && state != CapsuleState.IDLE && state != CapsuleState.MEDIA_PLAYING) {
             if (state != CapsuleState.EXPANDED_MEDIA && state != CapsuleState.EXPANDED_NOTIFICATION) return

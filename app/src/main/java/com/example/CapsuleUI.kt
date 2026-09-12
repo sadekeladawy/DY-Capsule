@@ -60,6 +60,15 @@ fun CapsuleUI() {
     val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
 
+    if (state == CapsuleState.CALIBRATION_MODE) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Red, RoundedCornerShape(percent = 50))
+        )
+        return
+    }
+
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
     Box(
@@ -185,9 +194,9 @@ fun MainIsland(
                 indication = null,
                 onClick = {
                     when (state) {
-                        CapsuleState.MEDIA_PLAYING -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
-                        CapsuleState.NOTIFICATION_POPUP -> CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
-                        CapsuleState.CHARGING_EVENT -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                        CapsuleState.IDLE, CapsuleState.MEDIA_PLAYING, CapsuleState.NOTIFICATION_POPUP, CapsuleState.CHARGING_EVENT -> {
+                            CapsuleStateManager.expand()
+                        }
                         CapsuleState.EXPANDED_MEDIA -> {
                             mediaInfo.packageName?.let { pkg ->
                                 try {
@@ -217,15 +226,14 @@ fun MainIsland(
             },
         contentAlignment = Alignment.Center
     ) {
-        Crossfade(targetState = state, label = "CapsuleContent") { currentState ->
-            when (currentState) {
-                CapsuleState.IDLE -> {}
-                CapsuleState.CALIBRATION_MODE -> {}
+        if (state != CapsuleState.IDLE && state != CapsuleState.CALIBRATION_MODE) {
+            when (state) {
                 CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
                 CapsuleState.MEDIA_PLAYING -> MediaPlayingMini(mediaInfo)
                 CapsuleState.NOTIFICATION_POPUP -> notificationInfo?.let { NotificationAlert(it) }
                 CapsuleState.EXPANDED_MEDIA -> MediaExpandedCard(mediaInfo)
                 CapsuleState.EXPANDED_NOTIFICATION -> notificationInfo?.let { NotificationExpandedCard(it) }
+                else -> {}
             }
         }
     }

@@ -92,6 +92,17 @@ class CapsuleOverlayService : Service() {
                     val view = composeView ?: return@collect
                     val params = view.layoutParams as WindowManager.LayoutParams
                     var changed = false
+                    
+                    if (state == CapsuleState.CALIBRATION_MODE) {
+                        params.width = CapsuleStateManager.baseWidth.value
+                        params.height = CapsuleStateManager.baseHeight.value
+                        changed = true
+                    } else if (params.width != WindowManager.LayoutParams.WRAP_CONTENT || params.height != WindowManager.LayoutParams.WRAP_CONTENT) {
+                        params.width = WindowManager.LayoutParams.WRAP_CONTENT
+                        params.height = WindowManager.LayoutParams.WRAP_CONTENT
+                        changed = true
+                    }
+                    
                     if (state == CapsuleState.EXPANDED_MEDIA || state == CapsuleState.EXPANDED_NOTIFICATION) {
                         if ((params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH) == 0) {
                             params.flags = params.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
@@ -124,6 +135,26 @@ class CapsuleOverlayService : Service() {
                     val params = view.layoutParams as WindowManager.LayoutParams
                     if (params.y != yOffset) {
                         params.y = yOffset
+                        windowManager.updateViewLayout(view, params)
+                    }
+                }
+            }
+            launch {
+                CapsuleStateManager.baseWidth.collect { width ->
+                    if (CapsuleStateManager.currentState.value == CapsuleState.CALIBRATION_MODE) {
+                        val view = composeView ?: return@collect
+                        val params = view.layoutParams as WindowManager.LayoutParams
+                        params.width = width
+                        windowManager.updateViewLayout(view, params)
+                    }
+                }
+            }
+            launch {
+                CapsuleStateManager.baseHeight.collect { height ->
+                    if (CapsuleStateManager.currentState.value == CapsuleState.CALIBRATION_MODE) {
+                        val view = composeView ?: return@collect
+                        val params = view.layoutParams as WindowManager.LayoutParams
+                        params.height = height
                         windowManager.updateViewLayout(view, params)
                     }
                 }
@@ -189,10 +220,9 @@ class CapsuleOverlayService : Service() {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
-            // Ensure the window spans into the status bar area
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
 
