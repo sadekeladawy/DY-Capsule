@@ -1,0 +1,109 @@
+package com.example
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+object CapsuleStateManager {
+    private val scope = CoroutineScope(Dispatchers.Main)
+    
+    private val _currentState = MutableStateFlow(CapsuleState.IDLE)
+    val currentState: StateFlow<CapsuleState> = _currentState.asStateFlow()
+
+    private val _mediaInfo = MutableStateFlow(MediaInfo())
+    val mediaInfo: StateFlow<MediaInfo> = _mediaInfo.asStateFlow()
+
+    private val _notificationInfo = MutableStateFlow<NotificationInfo?>(null)
+    val notificationInfo: StateFlow<NotificationInfo?> = _notificationInfo.asStateFlow()
+
+    private val _batteryInfo = MutableStateFlow(BatteryInfo())
+    val batteryInfo: StateFlow<BatteryInfo> = _batteryInfo.asStateFlow()
+
+    private val _capsuleYOffset = MutableStateFlow(0f)
+    val capsuleYOffset: StateFlow<Float> = _capsuleYOffset.asStateFlow()
+
+    private var eventJob: Job? = null
+
+    fun setState(state: CapsuleState) {
+        if (_currentState.value == CapsuleState.CHARGING_EVENT && state != CapsuleState.IDLE && state != CapsuleState.MEDIA_PLAYING) {
+            if (state != CapsuleState.EXPANDED) return
+        }
+        _currentState.value = state
+        reevaluateState()
+    }
+
+    fun updateMediaInfo(info: MediaInfo) {
+        _mediaInfo.value = info
+        reevaluateState()
+    }
+
+    fun postNotification(info: NotificationInfo) {
+        _notificationInfo.value = info
+        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED) {
+            _currentState.value = CapsuleState.NOTIFICATION_POPUP
+            eventJob?.cancel()
+            eventJob = scope.launch {
+                delay(4000)
+                _notificationInfo.value = null
+                reevaluateState()
+            }
+        }
+    }
+    
+    fun clearNotification() {
+        _notificationInfo.value = null
+        reevaluateState()
+    }
+
+    fun updateBatteryInfo(info: BatteryInfo, connected: Boolean = false) {
+        _batteryInfo.value = info
+        if (connected) {
+            _currentState.value = CapsuleState.CHARGING_EVENT
+            eventJob?.cancel()
+            eventJob = scope.launch {
+                delay(4000)
+                reevaluateState(forceClearCharging = true)
+            }
+        }
+    }
+
+    fun setYOffset(offset: Float) {
+        _capsuleYOffset.value = offset
+    }
+
+    fun resetAll() {
+        eventJob?.cancel()
+        _notificationInfo.value = null
+        _mediaInfo.value = MediaInfo()
+        _batteryInfo.value = BatteryInfo()
+        _currentState.value = CapsuleState.IDLE
+    }
+    
+    private fun reevaluateState(forceClearCharging: Boolean = false) {
+        if (forceClearCharging && _currentState.value == CapsuleState.CHARGING_EVENT) {
+            _currentState.value = CapsuleState.IDLE
+        }
+        
+        val current = _currentState.value
+        if (current == CapsuleState.CHARGING_EVENT || current == CapsuleState.EXPANDED || current == CapsuleState.NOTIFICATION_POPUP) {
+            return
+        }
+        
+        if (_notificationInfo.value != null) {
+            _currentState.value = CapsuleState.NOTIFICATION_POPUP
+            return
+        }
+        
+        if (_mediaInfo.value.isPlaying) {
+            _currentState.value = CapsuleState.MEDIA_PLAYING
+            return
+        }
+        
+        _currentState.value = CapsuleState.IDLE
+    }
+}
