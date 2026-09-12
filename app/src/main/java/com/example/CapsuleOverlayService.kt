@@ -98,23 +98,8 @@ class CapsuleOverlayService : Service() {
                 CapsuleStateManager.currentState.collect { state ->
                     val view = composeView ?: return@collect
                     val params = view.layoutParams as? WindowManager.LayoutParams ?: return@collect
-                    var changed = false
-                    
-                    if (state == CapsuleState.EXPANDED_MEDIA || state == CapsuleState.EXPANDED_NOTIFICATION) {
-                        if ((params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) != 0) {
-                            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                            changed = true
-                        }
-                    } else {
-                        // Allow touches to pass through the empty area of the window
-                    }
-                    if (changed) {
-                        try {
-                            windowManager.updateViewLayout(view, params)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
+                    // With WRAP_CONTENT, we don't need to manually toggle FLAG_NOT_TOUCHABLE.
+                    // Compose will intercept touches within its bounds and let other touches pass through.
                 }
             }
             launch {
