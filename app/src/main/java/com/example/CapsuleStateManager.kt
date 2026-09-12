@@ -53,7 +53,7 @@ object CapsuleStateManager {
 
     fun postNotification(info: NotificationInfo) {
         _notificationInfo.value = info
-        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED_MEDIA && _currentState.value != CapsuleState.EXPANDED_NOTIFICATION && _currentState.value != CapsuleState.CALIBRATION) {
+        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED_MEDIA && _currentState.value != CapsuleState.EXPANDED_NOTIFICATION && _currentState.value != CapsuleState.CALIBRATION_MODE) {
             _currentState.value = CapsuleState.NOTIFICATION_POPUP
             eventJob?.cancel()
             eventJob = scope.launch {
@@ -71,7 +71,7 @@ object CapsuleStateManager {
 
     fun updateBatteryInfo(info: BatteryInfo, connected: Boolean = false) {
         _batteryInfo.value = info
-        if (connected && _currentState.value != CapsuleState.CALIBRATION) {
+        if (connected && _currentState.value != CapsuleState.CALIBRATION_MODE) {
             _currentState.value = CapsuleState.CHARGING_EVENT
             eventJob?.cancel()
             eventJob = scope.launch {
@@ -106,7 +106,7 @@ object CapsuleStateManager {
     }
     
     private fun reevaluateState(forceClearCharging: Boolean = false) {
-        if (_currentState.value == CapsuleState.CALIBRATION) {
+        if (_currentState.value == CapsuleState.CALIBRATION_MODE) {
             return
         }
 

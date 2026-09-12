@@ -29,12 +29,12 @@ object CapsulePreferencesRepository {
         context.preferencesDataStore.edit { it[Y_POS] = offset }
     }
 
-    fun getScaleWidth(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CAPSULE_WIDTH] ?: 120 }
+    fun getScaleWidth(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CAPSULE_WIDTH] ?: 60 }
     suspend fun setScaleWidth(context: Context, width: Int) {
         context.preferencesDataStore.edit { it[CAPSULE_WIDTH] = width }
     }
 
-    fun getScaleHeight(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CAPSULE_HEIGHT] ?: 36 }
+    fun getScaleHeight(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CAPSULE_HEIGHT] ?: 60 }
     suspend fun setScaleHeight(context: Context, height: Int) {
         context.preferencesDataStore.edit { it[CAPSULE_HEIGHT] = height }
     }

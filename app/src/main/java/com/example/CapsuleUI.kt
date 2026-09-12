@@ -57,20 +57,26 @@ fun CapsuleUI() {
     val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
 
+    if (state == CapsuleState.CALIBRATION_MODE) {
+        val width by CapsuleStateManager.baseWidth.collectAsState()
+        val height by CapsuleStateManager.baseHeight.collectAsState()
+        Box(
+            modifier = Modifier
+                .size(width.dp, height.dp)
+                .background(Color.Red, RoundedCornerShape(percent = 50))
+        )
+        return
+    }
+
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = yOffset.dp),
         contentAlignment = Alignment.TopCenter
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top,
-            modifier = Modifier
-                .offset { androidx.compose.ui.unit.IntOffset(xOffset, 0) }
-                .padding(top = 8.dp)
+            modifier = Modifier.padding(top = 8.dp)
         ) {
             MainIsland(
                 state = state, 
@@ -102,7 +108,7 @@ fun MainIsland(
 
     val targetWidth = when (state) {
         CapsuleState.IDLE -> idleWidth
-        CapsuleState.CALIBRATION -> idleWidth
+        CapsuleState.CALIBRATION_MODE -> idleWidth
         CapsuleState.MEDIA_PLAYING -> idleWidth + 80.dp
         CapsuleState.NOTIFICATION_POPUP -> idleWidth + 240.dp
         CapsuleState.CHARGING_EVENT -> idleWidth + 120.dp
@@ -112,7 +118,7 @@ fun MainIsland(
 
     val targetHeight = when (state) {
         CapsuleState.IDLE -> idleHeight
-        CapsuleState.CALIBRATION -> idleHeight
+        CapsuleState.CALIBRATION_MODE -> idleHeight
         CapsuleState.MEDIA_PLAYING -> idleHeight
         CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
         CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
@@ -124,7 +130,7 @@ fun MainIsland(
         CapsuleState.EXPANDED_MEDIA -> 40.dp
         CapsuleState.EXPANDED_NOTIFICATION -> 40.dp
         CapsuleState.NOTIFICATION_POPUP -> 40.dp
-        CapsuleState.CALIBRATION -> (baseHeight / 2).dp
+        CapsuleState.CALIBRATION_MODE -> (baseHeight / 2).dp
         else -> 50.dp
     }
 
@@ -151,7 +157,7 @@ fun MainIsland(
     )
 
     val interactionSource = remember { MutableInteractionSource() }
-    val bgColor = if (state == CapsuleState.CALIBRATION) Color.Red else Color.Black.copy(alpha = 1f)
+    val bgColor = if (state == CapsuleState.CALIBRATION_MODE) Color.Red else Color.Black.copy(alpha = 1f)
 
     Box(
         modifier = Modifier
@@ -163,7 +169,7 @@ fun MainIsland(
                 animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
             )
             .shadow(
-                elevation = if (state == CapsuleState.IDLE || state == CapsuleState.CALIBRATION) 0.dp else 24.dp,
+                elevation = if (state == CapsuleState.IDLE || state == CapsuleState.CALIBRATION_MODE) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner),
                 ambientColor = outlineColor,
                 spotColor = outlineColor
@@ -210,7 +216,7 @@ fun MainIsland(
         Crossfade(targetState = state, label = "CapsuleContent") { currentState ->
             when (currentState) {
                 CapsuleState.IDLE -> {}
-                CapsuleState.CALIBRATION -> {}
+                CapsuleState.CALIBRATION_MODE -> {}
                 CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
                 CapsuleState.MEDIA_PLAYING -> MediaPlayingMini(mediaInfo)
                 CapsuleState.NOTIFICATION_POPUP -> notificationInfo?.let { NotificationAlert(it) }

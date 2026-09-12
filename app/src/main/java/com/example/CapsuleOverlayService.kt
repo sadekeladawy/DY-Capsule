@@ -108,6 +108,26 @@ class CapsuleOverlayService : Service() {
                     }
                 }
             }
+            launch {
+                CapsuleStateManager.capsuleXOffset.collect { xOffset ->
+                    val view = composeView ?: return@collect
+                    val params = view.layoutParams as WindowManager.LayoutParams
+                    if (params.x != xOffset) {
+                        params.x = xOffset
+                        windowManager.updateViewLayout(view, params)
+                    }
+                }
+            }
+            launch {
+                CapsuleStateManager.capsuleYOffset.collect { yOffset ->
+                    val view = composeView ?: return@collect
+                    val params = view.layoutParams as WindowManager.LayoutParams
+                    if (params.y != yOffset) {
+                        params.y = yOffset
+                        windowManager.updateViewLayout(view, params)
+                    }
+                }
+            }
         }
     }
 
@@ -158,7 +178,7 @@ class CapsuleOverlayService : Service() {
         }
 
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

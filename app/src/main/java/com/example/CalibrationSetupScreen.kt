@@ -1,5 +1,7 @@
 package com.example
 
+import android.content.Intent
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -29,8 +31,18 @@ fun CalibrationSetupScreen(onFinish: () -> Unit) {
     val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
     val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
 
-    LaunchedEffect(Unit) {
-        CapsuleStateManager.setState(CapsuleState.CALIBRATION)
+    DisposableEffect(Unit) {
+        val intent = Intent(context, CapsuleOverlayService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+        CapsuleStateManager.setState(CapsuleState.CALIBRATION_MODE)
+        
+        onDispose {
+            CapsuleStateManager.setState(CapsuleState.IDLE)
+        }
     }
 
     Column(
@@ -116,7 +128,7 @@ fun CalibrationSetupScreen(onFinish: () -> Unit) {
         CalibrationRow(
             title = "Height",
             value = baseHeight,
-            range = 20..150,
+            range = 20..300,
             onValueChange = { 
                 CapsuleStateManager.setBaseHeight(it)
                 coroutineScope.launch { CapsulePreferencesRepository.setScaleHeight(context, it) }
