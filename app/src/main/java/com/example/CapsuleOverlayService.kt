@@ -48,13 +48,11 @@ class CapsuleOverlayService : Service() {
             launch {
                 CapsulePreferencesRepository.getXOffset(this@CapsuleOverlayService).collect { offset ->
                     CapsuleStateManager.setXOffset(offset)
-                    updateLayoutParams(xOffset = offset)
                 }
             }
             launch {
                 CapsulePreferencesRepository.getYOffset(this@CapsuleOverlayService).collect { offset ->
                     CapsuleStateManager.setYOffset(offset)
-                    updateLayoutParams(yOffset = offset)
                 }
             }
             launch {
@@ -89,16 +87,6 @@ class CapsuleOverlayService : Service() {
         setupOverlayView()
 
         stateJob = scope.launch {
-            launch {
-                CapsuleStateManager.capsuleYOffset.collect { offset ->
-                    updateLayoutParams(yOffset = offset)
-                }
-            }
-            launch {
-                CapsuleStateManager.capsuleXOffset.collect { offset ->
-                    updateLayoutParams(xOffset = offset)
-                }
-            }
             launch {
                 CapsuleStateManager.currentState.collect { state ->
                     val view = composeView ?: return@collect
@@ -169,7 +157,7 @@ class CapsuleOverlayService : Service() {
         }
 
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -181,19 +169,11 @@ class CapsuleOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = CapsuleStateManager.capsuleXOffset.value.toInt()
-            y = CapsuleStateManager.capsuleYOffset.value.toInt()
+            x = 0
+            y = 0
         }
 
         windowManager.addView(composeView, params)
-    }
-
-    private fun updateLayoutParams(xOffset: Float? = null, yOffset: Float? = null) {
-        val view = composeView ?: return
-        val params = view.layoutParams as WindowManager.LayoutParams
-        if (xOffset != null) params.x = xOffset.toInt()
-        if (yOffset != null) params.y = yOffset.toInt()
-        windowManager.updateViewLayout(view, params)
     }
 
     override fun onDestroy() {

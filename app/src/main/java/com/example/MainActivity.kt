@@ -275,7 +275,7 @@ fun MainScreen() {
                             CapsulePreferencesRepository.setXOffset(context, xOffset)
                         }
                     },
-                    valueRange = 0f..500f,
+                    valueRange = -500f..500f,
                     modifier = Modifier.fillMaxWidth()
                 )
 

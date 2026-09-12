@@ -51,22 +51,34 @@ fun CapsuleUI() {
     val batteryInfo by CapsuleStateManager.batteryInfo.collectAsState()
     val isSplitEnabled by CapsulePreferencesRepository.isSplitIslandEnabled(context).collectAsState(initial = true)
 
+    val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
+    val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
+
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top,
-        modifier = Modifier.padding(top = 8.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = yOffset.dp),
+        contentAlignment = Alignment.TopCenter
     ) {
-        MainIsland(
-            state = state, 
-            mediaInfo = mediaInfo, 
-            notificationInfo = notificationInfo, 
-            batteryInfo = batteryInfo
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier
+                .offset { androidx.compose.ui.unit.IntOffset(xOffset.toInt(), 0) }
+                .padding(top = 8.dp)
+        ) {
+            MainIsland(
+                state = state, 
+                mediaInfo = mediaInfo, 
+                notificationInfo = notificationInfo, 
+                batteryInfo = batteryInfo
+            )
 
-        AnimatedVisibility(visible = showSplitPill) {
-            SecondaryIsland(mediaInfo = mediaInfo)
+            AnimatedVisibility(visible = showSplitPill) {
+                SecondaryIsland(mediaInfo = mediaInfo)
+            }
         }
     }
 }

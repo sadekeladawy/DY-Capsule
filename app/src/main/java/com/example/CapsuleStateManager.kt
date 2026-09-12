@@ -106,12 +106,11 @@ object CapsuleStateManager {
     }
     
     private fun reevaluateState(forceClearCharging: Boolean = false) {
-        if (forceClearCharging && _currentState.value == CapsuleState.CHARGING_EVENT) {
-            _currentState.value = CapsuleState.IDLE
+        if (_currentState.value == CapsuleState.CHARGING_EVENT && !forceClearCharging) {
+            return
         }
         
-        val current = _currentState.value
-        if (current == CapsuleState.CHARGING_EVENT || current == CapsuleState.EXPANDED || current == CapsuleState.NOTIFICATION_POPUP) {
+        if (_currentState.value == CapsuleState.EXPANDED) {
             return
         }
         
