@@ -18,6 +18,12 @@ object CapsulePreferencesRepository {
     private val CAPSULE_WIDTH = intPreferencesKey("capsule_width")
     private val CAPSULE_HEIGHT = intPreferencesKey("capsule_height")
     private val SPLIT_ISLAND_ENABLED = booleanPreferencesKey("split_island_enabled")
+    private val CORNER_RADIUS = intPreferencesKey("capsule_corner_radius")
+    
+    fun getCornerRadius(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CORNER_RADIUS] ?: 50 }
+    suspend fun setCornerRadius(context: Context, radius: Int) {
+        context.preferencesDataStore.edit { it[CORNER_RADIUS] = radius }
+    }
     
     fun getXOffset(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[X_POS] ?: 0 }
     suspend fun setXOffset(context: Context, offset: Int) {

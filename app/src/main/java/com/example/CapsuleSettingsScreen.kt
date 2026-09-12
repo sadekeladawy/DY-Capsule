@@ -30,6 +30,7 @@ fun CapsuleSettingsScreen(onFinish: () -> Unit) {
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
     val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
     val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
+    val cornerRadius by CapsuleStateManager.capsuleCornerRadius.collectAsState()
 
     DisposableEffect(Unit) {
         val intent = Intent(context, CapsuleOverlayService::class.java)
@@ -95,6 +96,16 @@ fun CapsuleSettingsScreen(onFinish: () -> Unit) {
             onValueChange = { 
                 CapsuleStateManager.setBaseHeight(it)
                 coroutineScope.launch { CapsulePreferencesRepository.setScaleHeight(context, it) }
+            }
+        )
+
+        CalibrationRow(
+            title = "Corner Radius",
+            value = cornerRadius,
+            range = 0..100,
+            onValueChange = { 
+                CapsuleStateManager.setCornerRadius(it)
+                coroutineScope.launch { CapsulePreferencesRepository.setCornerRadius(context, it) }
             }
         )
 

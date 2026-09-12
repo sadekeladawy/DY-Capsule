@@ -36,6 +36,9 @@ object CapsuleStateManager {
     private val _baseHeight = MutableStateFlow(30)
     val baseHeight: StateFlow<Int> = _baseHeight.asStateFlow()
 
+    private val _capsuleCornerRadius = MutableStateFlow(50)
+    val capsuleCornerRadius: StateFlow<Int> = _capsuleCornerRadius.asStateFlow()
+
     private var eventJob: Job? = null
 
     fun expand() {
@@ -103,6 +106,10 @@ object CapsuleStateManager {
 
     fun setBaseHeight(height: Int) {
         _baseHeight.value = height
+    }
+
+    fun setCornerRadius(radius: Int) {
+        _capsuleCornerRadius.value = radius
     }
 
     fun resetAll() {

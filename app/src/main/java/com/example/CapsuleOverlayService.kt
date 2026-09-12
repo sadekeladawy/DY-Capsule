@@ -66,6 +66,11 @@ class CapsuleOverlayService : Service() {
                     CapsuleStateManager.setBaseHeight(height)
                 }
             }
+            launch {
+                CapsulePreferencesRepository.getCornerRadius(this@CapsuleOverlayService).collect { radius ->
+                    CapsuleStateManager.setCornerRadius(radius)
+                }
+            }
         }
 
         val filter = IntentFilter().apply {
@@ -94,21 +99,13 @@ class CapsuleOverlayService : Service() {
                     val params = view.layoutParams as WindowManager.LayoutParams
                     var changed = false
                     
-                    if (params.width != WindowManager.LayoutParams.WRAP_CONTENT || params.height != WindowManager.LayoutParams.WRAP_CONTENT) {
-                        params.width = WindowManager.LayoutParams.WRAP_CONTENT
-                        params.height = WindowManager.LayoutParams.WRAP_CONTENT
-                        changed = true
-                    }
-                    
                     if (state == CapsuleState.EXPANDED_MEDIA || state == CapsuleState.EXPANDED_NOTIFICATION) {
                         if ((params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) != 0) {
                             params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                             changed = true
                         }
                     } else {
-                        // Allow touches to pass through the empty area of the WRAP_CONTENT window
-                        // For touchable idle pill, we cannot use FLAG_NOT_TOUCHABLE on the entire window
-                        // Instead, we keep the window touchable but rely on Compose's clickable
+                        // Allow touches to pass through the empty area of the window
                     }
                     if (changed) {
                         windowManager.updateViewLayout(view, params)

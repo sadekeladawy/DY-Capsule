@@ -42,6 +42,11 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import android.animation.ValueAnimator
+import android.view.WindowManager
+import android.view.animation.OvershootInterpolator
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -115,29 +120,48 @@ fun MainIsland(
         CapsuleState.EXPANDED_NOTIFICATION -> idleHeight + 80.dp
     }
 
+    val density = LocalDensity.current
+    val view = LocalView.current
+    
+    val idleCornerRadius by CapsuleStateManager.capsuleCornerRadius.collectAsState()
+
     val cornerRadius = when (state) {
         CapsuleState.EXPANDED_MEDIA -> 40.dp
         CapsuleState.EXPANDED_NOTIFICATION -> 40.dp
         CapsuleState.NOTIFICATION_POPUP -> 40.dp
-        else -> 50.dp
+        else -> idleCornerRadius.dp
     }
 
-    val animatedWidth = remember { Animatable(targetWidth, Dp.VectorConverter) }
-    val animatedHeight = remember { Animatable(targetHeight, Dp.VectorConverter) }
     val animatedCorner = remember { Animatable(cornerRadius, Dp.VectorConverter) }
 
-    LaunchedEffect(targetWidth) {
-        animatedWidth.animateTo(
-            targetValue = targetWidth,
-            animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-        )
-    }
+    DisposableEffect(targetWidth, targetHeight) {
+        val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
+        val params = view.layoutParams as? WindowManager.LayoutParams
+        if (params != null) {
+            val pxTargetWidth = with(density) { targetWidth.toPx() }.toInt()
+            val pxTargetHeight = with(density) { targetHeight.toPx() }.toInt()
+            
+            val startWidth = if (params.width > 0) params.width else pxTargetWidth
+            val startHeight = if (params.height > 0) params.height else pxTargetHeight
 
-    LaunchedEffect(targetHeight) {
-        animatedHeight.animateTo(
-            targetValue = targetHeight,
-            animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-        )
+            val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 400
+                interpolator = OvershootInterpolator(0.8f)
+                addUpdateListener { anim ->
+                    val fraction = anim.animatedFraction
+                    params.width = (startWidth + (pxTargetWidth - startWidth) * fraction).toInt()
+                    params.height = (startHeight + (pxTargetHeight - startHeight) * fraction).toInt()
+                    windowManager.updateViewLayout(view, params)
+                }
+                start()
+            }
+
+            onDispose {
+                animator.cancel()
+            }
+        } else {
+            onDispose { }
+        }
     }
 
     LaunchedEffect(cornerRadius) {
@@ -167,8 +191,7 @@ fun MainIsland(
 
     Box(
         modifier = Modifier
-            .width(animatedWidth.value)
-            .height(animatedHeight.value)
+            .fillMaxSize()
             .shadow(
                 elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner.value),
