@@ -49,7 +49,7 @@ fun CapsuleUI() {
     val mediaInfo by CapsuleStateManager.mediaInfo.collectAsState()
     val notificationInfo by CapsuleStateManager.notificationInfo.collectAsState()
     val batteryInfo by CapsuleStateManager.batteryInfo.collectAsState()
-    val isSplitEnabled by CapsulePreferences.isSplitIslandEnabled(context).collectAsState(initial = true)
+    val isSplitEnabled by CapsulePreferencesRepository.isSplitIslandEnabled(context).collectAsState(initial = true)
 
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
@@ -78,23 +78,26 @@ fun MainIsland(
     notificationInfo: NotificationInfo?,
     batteryInfo: BatteryInfo
 ) {
-    val idleWidth = 100.dp
-    val idleHeight = 30.dp
+    val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
+    val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
+
+    val idleWidth = baseWidth.dp
+    val idleHeight = baseHeight.dp
 
     val targetWidth = when (state) {
         CapsuleState.IDLE -> idleWidth
-        CapsuleState.MEDIA_PLAYING -> 180.dp
-        CapsuleState.NOTIFICATION_POPUP -> 340.dp
-        CapsuleState.CHARGING_EVENT -> 220.dp
-        CapsuleState.EXPANDED -> 340.dp
+        CapsuleState.MEDIA_PLAYING -> idleWidth + 80.dp
+        CapsuleState.NOTIFICATION_POPUP -> idleWidth + 240.dp
+        CapsuleState.CHARGING_EVENT -> idleWidth + 120.dp
+        CapsuleState.EXPANDED -> idleWidth + 240.dp
     }
 
     val targetHeight = when (state) {
         CapsuleState.IDLE -> idleHeight
         CapsuleState.MEDIA_PLAYING -> idleHeight
-        CapsuleState.NOTIFICATION_POPUP -> 80.dp
-        CapsuleState.CHARGING_EVENT -> 40.dp
-        CapsuleState.EXPANDED -> 200.dp
+        CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
+        CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
+        CapsuleState.EXPANDED -> idleHeight + 170.dp
     }
 
     val cornerRadius = when (state) {

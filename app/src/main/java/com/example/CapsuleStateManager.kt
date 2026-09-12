@@ -24,8 +24,17 @@ object CapsuleStateManager {
     private val _batteryInfo = MutableStateFlow(BatteryInfo())
     val batteryInfo: StateFlow<BatteryInfo> = _batteryInfo.asStateFlow()
 
+    private val _capsuleXOffset = MutableStateFlow(0f)
+    val capsuleXOffset: StateFlow<Float> = _capsuleXOffset.asStateFlow()
+
     private val _capsuleYOffset = MutableStateFlow(0f)
     val capsuleYOffset: StateFlow<Float> = _capsuleYOffset.asStateFlow()
+
+    private val _baseWidth = MutableStateFlow(100f)
+    val baseWidth: StateFlow<Float> = _baseWidth.asStateFlow()
+
+    private val _baseHeight = MutableStateFlow(30f)
+    val baseHeight: StateFlow<Float> = _baseHeight.asStateFlow()
 
     private var eventJob: Job? = null
 
@@ -72,8 +81,20 @@ object CapsuleStateManager {
         }
     }
 
+    fun setXOffset(offset: Float) {
+        _capsuleXOffset.value = offset
+    }
+
     fun setYOffset(offset: Float) {
         _capsuleYOffset.value = offset
+    }
+
+    fun setBaseWidth(width: Float) {
+        _baseWidth.value = width
+    }
+
+    fun setBaseHeight(height: Float) {
+        _baseHeight.value = height
     }
 
     fun resetAll() {

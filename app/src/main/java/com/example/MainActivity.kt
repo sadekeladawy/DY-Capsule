@@ -54,13 +54,23 @@ fun MainScreen() {
 
     var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var hasNotificationPermission by remember { mutableStateOf(checkNotificationListenerPermission(context)) }
+    var hasPostNotificationPermission by remember { mutableStateOf(checkPostNotificationsPermission(context)) }
     
+    val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
-    val isSplitEnabled by CapsulePreferences.isSplitIslandEnabled(context).collectAsState(initial = true)
+    val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
+    val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
+    val isSplitEnabled by CapsulePreferencesRepository.isSplitIslandEnabled(context).collectAsState(initial = true)
 
     LaunchedEffect(Unit) {
-        val initialOffset = CapsulePreferences.getYOffset(context).first()
-        CapsuleStateManager.setYOffset(initialOffset)
+        val initialX = CapsulePreferencesRepository.getXOffset(context).first()
+        CapsuleStateManager.setXOffset(initialX)
+        val initialY = CapsulePreferencesRepository.getYOffset(context).first()
+        CapsuleStateManager.setYOffset(initialY)
+        val initialWidth = CapsulePreferencesRepository.getScaleWidth(context).first()
+        CapsuleStateManager.setBaseWidth(initialWidth)
+        val initialHeight = CapsulePreferencesRepository.getScaleHeight(context).first()
+        CapsuleStateManager.setBaseHeight(initialHeight)
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -68,6 +78,7 @@ fun MainScreen() {
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasOverlayPermission = Settings.canDrawOverlays(context)
                 hasNotificationPermission = checkNotificationListenerPermission(context)
+                hasPostNotificationPermission = checkPostNotificationsPermission(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -105,7 +116,7 @@ fun MainScreen() {
                     context.startService(intent)
                 }
             },
-            enabled = hasOverlayPermission && hasNotificationPermission,
+            enabled = hasOverlayPermission && hasNotificationPermission && hasPostNotificationPermission,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -145,6 +156,21 @@ fun MainScreen() {
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    PermissionCard(
+                        title = "Post Notifications",
+                        description = "Required to run foreground service.",
+                        isGranted = hasPostNotificationPermission,
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 
                 PermissionCard(
                     title = "Battery Optimization",
@@ -234,22 +260,61 @@ fun MainScreen() {
                         checked = isSplitEnabled,
                         onCheckedChange = { checked ->
                             coroutineScope.launch {
-                                CapsulePreferences.setSplitIslandEnabled(context, checked)
+                                CapsulePreferencesRepository.setSplitIslandEnabled(context, checked)
                             }
                         }
                     )
                 }
 
-                Text("Capsule Y-Offset (Fine Tune)", fontWeight = FontWeight.Bold)
+                Text("Capsule X-Offset", fontWeight = FontWeight.Bold)
+                Slider(
+                    value = xOffset,
+                    onValueChange = { CapsuleStateManager.setXOffset(it) },
+                    onValueChangeFinished = {
+                        coroutineScope.launch {
+                            CapsulePreferencesRepository.setXOffset(context, xOffset)
+                        }
+                    },
+                    valueRange = 0f..500f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Capsule Y-Offset", fontWeight = FontWeight.Bold)
                 Slider(
                     value = yOffset,
                     onValueChange = { CapsuleStateManager.setYOffset(it) },
                     onValueChangeFinished = {
                         coroutineScope.launch {
-                            CapsulePreferences.setYOffset(context, yOffset)
+                            CapsulePreferencesRepository.setYOffset(context, yOffset)
                         }
                     },
                     valueRange = 0f..200f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Base Width", fontWeight = FontWeight.Bold)
+                Slider(
+                    value = baseWidth,
+                    onValueChange = { CapsuleStateManager.setBaseWidth(it) },
+                    onValueChangeFinished = {
+                        coroutineScope.launch {
+                            CapsulePreferencesRepository.setScaleWidth(context, baseWidth)
+                        }
+                    },
+                    valueRange = 50f..300f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Base Height", fontWeight = FontWeight.Bold)
+                Slider(
+                    value = baseHeight,
+                    onValueChange = { CapsuleStateManager.setBaseHeight(it) },
+                    onValueChangeFinished = {
+                        coroutineScope.launch {
+                            CapsulePreferencesRepository.setScaleHeight(context, baseHeight)
+                        }
+                    },
+                    valueRange = 20f..100f,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -305,4 +370,11 @@ fun checkNotificationListenerPermission(context: Context): Boolean {
     val componentName = ComponentName(context, CapsuleNotificationListener::class.java)
     val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
     return enabledListeners.contains(context.packageName)
+}
+
+fun checkPostNotificationsPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        return context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+    return true
 }

@@ -45,8 +45,28 @@ class CapsuleOverlayService : Service() {
         MediaControllerManager.init(this)
 
         scope.launch {
-            val initialOffset = CapsulePreferences.getYOffset(this@CapsuleOverlayService).first()
-            CapsuleStateManager.setYOffset(initialOffset)
+            launch {
+                CapsulePreferencesRepository.getXOffset(this@CapsuleOverlayService).collect { offset ->
+                    CapsuleStateManager.setXOffset(offset)
+                    updateLayoutParams(xOffset = offset)
+                }
+            }
+            launch {
+                CapsulePreferencesRepository.getYOffset(this@CapsuleOverlayService).collect { offset ->
+                    CapsuleStateManager.setYOffset(offset)
+                    updateLayoutParams(yOffset = offset)
+                }
+            }
+            launch {
+                CapsulePreferencesRepository.getScaleWidth(this@CapsuleOverlayService).collect { width ->
+                    CapsuleStateManager.setBaseWidth(width)
+                }
+            }
+            launch {
+                CapsulePreferencesRepository.getScaleHeight(this@CapsuleOverlayService).collect { height ->
+                    CapsuleStateManager.setBaseHeight(height)
+                }
+            }
         }
 
         val filter = IntentFilter().apply {
@@ -68,9 +88,39 @@ class CapsuleOverlayService : Service() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         setupOverlayView()
 
-        stateJob = CapsuleStateManager.capsuleYOffset.onEach { offset ->
-            updateLayoutParams(offset)
-        }.launchIn(scope)
+        stateJob = scope.launch {
+            launch {
+                CapsuleStateManager.capsuleYOffset.collect { offset ->
+                    updateLayoutParams(yOffset = offset)
+                }
+            }
+            launch {
+                CapsuleStateManager.capsuleXOffset.collect { offset ->
+                    updateLayoutParams(xOffset = offset)
+                }
+            }
+            launch {
+                CapsuleStateManager.currentState.collect { state ->
+                    val view = composeView ?: return@collect
+                    val params = view.layoutParams as WindowManager.LayoutParams
+                    var changed = false
+                    if (state == CapsuleState.EXPANDED) {
+                        if ((params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH) == 0) {
+                            params.flags = params.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                            changed = true
+                        }
+                    } else {
+                        if ((params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH) != 0) {
+                            params.flags = params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH.inv()
+                            changed = true
+                        }
+                    }
+                    if (changed) {
+                        windowManager.updateViewLayout(view, params)
+                    }
+                }
+            }
+        }
     }
 
     private fun startForegroundService() {
@@ -100,6 +150,15 @@ class CapsuleOverlayService : Service() {
             setContent {
                 CapsuleUI()
             }
+            setOnTouchListener { _, event ->
+                if (event.action == android.view.MotionEvent.ACTION_OUTSIDE) {
+                    if (CapsuleStateManager.currentState.value == CapsuleState.EXPANDED) {
+                        CapsuleStateManager.setState(CapsuleState.IDLE)
+                        return@setOnTouchListener true
+                    }
+                }
+                false
+            }
         }
 
         lifecycleHelper = OverlayLifecycleHelper().apply {
@@ -118,21 +177,22 @@ class CapsuleOverlayService : Service() {
                 WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.TOP or Gravity.START
+            x = CapsuleStateManager.capsuleXOffset.value.toInt()
             y = CapsuleStateManager.capsuleYOffset.value.toInt()
         }
 
         windowManager.addView(composeView, params)
     }
 
-    private fun updateLayoutParams(yOffset: Float) {
+    private fun updateLayoutParams(xOffset: Float? = null, yOffset: Float? = null) {
         val view = composeView ?: return
         val params = view.layoutParams as WindowManager.LayoutParams
-        params.y = yOffset.toInt()
+        if (xOffset != null) params.x = xOffset.toInt()
+        if (yOffset != null) params.y = yOffset.toInt()
         windowManager.updateViewLayout(view, params)
     }
 
