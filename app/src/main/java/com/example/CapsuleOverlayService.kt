@@ -98,7 +98,6 @@ class CapsuleOverlayService : Service() {
                 CapsuleStateManager.currentState.collect { state ->
                     val view = composeView ?: return@collect
                     val params = view.layoutParams as? WindowManager.LayoutParams ?: return@collect
-                    // With WRAP_CONTENT, we don't need to manually toggle FLAG_NOT_TOUCHABLE.
                     // Compose will intercept touches within its bounds and let other touches pass through.
                 }
             }
@@ -197,7 +196,7 @@ class CapsuleOverlayService : Service() {
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = 0
             y = 0
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

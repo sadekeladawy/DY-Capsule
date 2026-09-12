@@ -44,9 +44,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import android.animation.ValueAnimator
 import android.view.WindowManager
-import android.view.animation.OvershootInterpolator
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,16 +59,18 @@ fun CapsuleUI() {
     val notificationInfo by CapsuleStateManager.notificationInfo.collectAsState()
     val batteryInfo by CapsuleStateManager.batteryInfo.collectAsState()
     val isSplitEnabled by CapsulePreferencesRepository.isSplitIslandEnabled(context).collectAsState(initial = true)
-
+    
     val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
-
+    
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
     Box(
+        
         contentAlignment = Alignment.TopCenter
     ) {
         Row(
+            
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top
         ) {
@@ -80,7 +80,6 @@ fun CapsuleUI() {
                 notificationInfo = notificationInfo, 
                 batteryInfo = batteryInfo
             )
-
             AnimatedVisibility(visible = showSplitPill) {
                 SecondaryIsland(mediaInfo = mediaInfo)
             }
@@ -95,97 +94,43 @@ fun MainIsland(
     notificationInfo: NotificationInfo?,
     batteryInfo: BatteryInfo
 ) {
-    val context = LocalContext.current
     val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
     val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
 
     val idleWidth = baseWidth.dp.coerceAtLeast(24.dp)
     val idleHeight = baseHeight.dp.coerceAtLeast(24.dp)
-
-    val targetWidth = when (state) {
-        CapsuleState.IDLE -> idleWidth
-        CapsuleState.MEDIA_PLAYING -> idleWidth + 80.dp
-        CapsuleState.NOTIFICATION_POPUP -> idleWidth + 240.dp
-        CapsuleState.CHARGING_EVENT -> idleWidth + 120.dp
-        CapsuleState.EXPANDED_MEDIA -> idleWidth + 240.dp
-        CapsuleState.EXPANDED_NOTIFICATION -> idleWidth + 240.dp
-    }
-
-    val targetHeight = when (state) {
-        CapsuleState.IDLE -> idleHeight
-        CapsuleState.MEDIA_PLAYING -> idleHeight
-        CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
-        CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
-        CapsuleState.EXPANDED_MEDIA -> idleHeight + 130.dp
-        CapsuleState.EXPANDED_NOTIFICATION -> idleHeight + 80.dp
-    }
-
-    val density = LocalDensity.current
-    val view = LocalView.current
     
     val idleCornerRadius by CapsuleStateManager.capsuleCornerRadius.collectAsState()
-
     val cornerRadius = when (state) {
         CapsuleState.EXPANDED_MEDIA -> 40.dp
         CapsuleState.EXPANDED_NOTIFICATION -> 40.dp
         CapsuleState.NOTIFICATION_POPUP -> 40.dp
         else -> idleCornerRadius.dp
     }
-
-
-    val animatedWidth by animateDpAsState(
-        targetValue = targetWidth,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-    )
-
-    val animatedHeight by animateDpAsState(
-        targetValue = targetHeight,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-    )
-
-    DisposableEffect(Unit) {
-        val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
-        val params = view.layoutParams as? WindowManager.LayoutParams
-        if (params != null) {
-            params.width = WindowManager.LayoutParams.WRAP_CONTENT
-            params.height = WindowManager.LayoutParams.WRAP_CONTENT
-            try {
-                windowManager.updateViewLayout(view, params)
-            } catch (e: Exception) {}
-        }
-        onDispose { }
-    }
-
+    
     val animatedCorner = remember { Animatable(cornerRadius, Dp.VectorConverter) }
-
+    
     LaunchedEffect(cornerRadius) {
-        animatedCorner.animateTo(
-            targetValue = cornerRadius,
-            animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
-        )
+        animatedCorner.animateTo(cornerRadius, animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f))
     }
 
-    val dominantColor = mediaInfo.dominantColor?.let { Color(it) } ?: Color.DarkGray
-    val outlineColor by animateColorAsState(
-        targetValue = when (state) {
-            CapsuleState.CHARGING_EVENT -> Color.Green.copy(alpha = 0.5f)
-            CapsuleState.EXPANDED_MEDIA -> dominantColor.copy(alpha = 0.5f)
-            CapsuleState.EXPANDED_NOTIFICATION -> Color.White.copy(alpha = 0.2f)
-            CapsuleState.NOTIFICATION_POPUP -> Color.White.copy(alpha = 0.2f)
-            else -> Color.Transparent
-        },
-        animationSpec = spring(stiffness = Spring.StiffnessLow)
-    )
+    val bgColor by animateColorAsState(if (state == CapsuleState.CHARGING_EVENT) Color(0xFF111111) else Color.Black)
+    val outlineColor = if (state == CapsuleState.CHARGING_EVENT) Color.Green.copy(alpha = 0.5f) else Color.Transparent
 
     val interactionSource = remember { MutableInteractionSource() }
-    val bgColor by animateColorAsState(
-        targetValue = Color.Black.copy(alpha = 1f),
-        animationSpec = spring(stiffness = Spring.StiffnessLow)
-    )
+
+    val stateModifier = if (state == CapsuleState.IDLE) {
+        Modifier.size(idleWidth, idleHeight)
+    } else if (state == CapsuleState.MEDIA_PLAYING || state == CapsuleState.CHARGING_EVENT) {
+        Modifier.width(idleWidth + if(state == CapsuleState.CHARGING_EVENT) 120.dp else 80.dp).wrapContentHeight()
+    } else {
+        Modifier.widthIn(max = 380.dp).wrapContentSize()
+    }
 
     Box(
         modifier = Modifier
-            .size(animatedWidth, animatedHeight)
+            .then(stateModifier)
+            .animateContentSize(animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f))
             .shadow(
                 elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner.value.coerceAtLeast(0.dp)),
@@ -198,47 +143,34 @@ fun MainIsland(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
-                    when (state) {
-                        CapsuleState.IDLE, CapsuleState.MEDIA_PLAYING, CapsuleState.NOTIFICATION_POPUP, CapsuleState.CHARGING_EVENT -> {
-                            CapsuleStateManager.expand()
+                    if (state == CapsuleState.IDLE) {
+                        if (mediaInfo.isPlaying) {
+                            CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                        } else if (notificationInfo != null) {
+                            CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
                         }
-                        CapsuleState.EXPANDED_MEDIA -> {
-                            mediaInfo.packageName?.let { pkg ->
-                                try {
-                                    val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                    intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    if (intent != null) context.startActivity(intent)
-                                } catch (e: Exception) { e.printStackTrace() }
-                            }
-                            CapsuleStateManager.setState(CapsuleState.IDLE)
-                        }
-                        CapsuleState.EXPANDED_NOTIFICATION -> {
-                            try {
-                                notificationInfo?.contentIntent?.send()
-                            } catch (e: Exception) { e.printStackTrace() }
-                            CapsuleStateManager.setState(CapsuleState.IDLE)
-                        }
-                        else -> {}
+                    } else {
+                        CapsuleStateManager.setState(CapsuleState.IDLE)
                     }
                 }
             )
             .pointerInput(Unit) {
-                detectDragGestures { _, dragAmount ->
-                    if (dragAmount.y < -20) {
-                        CapsuleStateManager.setState(CapsuleState.IDLE)
-                    }
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    CapsuleStateManager.setXOffset(CapsuleStateManager.capsuleXOffset.value + dragAmount.x.toInt())
+                    CapsuleStateManager.setYOffset(CapsuleStateManager.capsuleYOffset.value + dragAmount.y.toInt())
                 }
             },
         contentAlignment = Alignment.Center
     ) {
-        if (state != CapsuleState.IDLE) {
-            when (state) {
-                CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
+        Crossfade(targetState = state, animationSpec = spring(stiffness = 300f)) { targetState ->
+            when (targetState) {
+                CapsuleState.IDLE -> Box(modifier = Modifier.fillMaxSize())
                 CapsuleState.MEDIA_PLAYING -> MediaPlayingMini(mediaInfo)
                 CapsuleState.NOTIFICATION_POPUP -> notificationInfo?.let { NotificationAlert(it) }
+                CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
                 CapsuleState.EXPANDED_MEDIA -> MediaExpandedCard(mediaInfo)
                 CapsuleState.EXPANDED_NOTIFICATION -> notificationInfo?.let { NotificationExpandedCard(it) }
-                else -> {}
             }
         }
     }
@@ -246,7 +178,9 @@ fun MainIsland(
 
 @Composable
 fun SecondaryIsland(mediaInfo: MediaInfo) {
-    val size = 30.dp
+    val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
+    val size = baseHeight.dp.coerceAtLeast(24.dp)
+    
     Box(
         modifier = Modifier
             .size(size)
@@ -261,8 +195,6 @@ fun SecondaryIsland(mediaInfo: MediaInfo) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        } else {
-            EqualizerWave(isPlaying = mediaInfo.isPlaying, color = mediaInfo.dominantColor?.let { Color(it) } ?: Color.White)
         }
     }
 }
@@ -273,7 +205,7 @@ fun ChargingAnimation(batteryInfo: BatteryInfo) {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -307,7 +239,7 @@ fun MediaPlayingMini(mediaInfo: MediaInfo) {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -448,13 +380,10 @@ fun MediaExpandedCard(mediaInfo: MediaInfo) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            EqualizerWave(isPlaying = mediaInfo.isPlaying, color = mediaInfo.dominantColor?.let { Color(it) } ?: Color.White)
         }
-        
         Spacer(modifier = Modifier.height(16.dp))
-        
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -462,7 +391,9 @@ fun MediaExpandedCard(mediaInfo: MediaInfo) {
                 Icon(Icons.Filled.FastRewind, contentDescription = "Previous", tint = Color.White)
             }
             IconButton(
-                onClick = { MediaControllerManager.playPause() },
+                onClick = {
+                    MediaControllerManager.playPause()
+                },
                 modifier = Modifier
                     .size(56.dp)
                     .background(Color.White.copy(alpha = 0.2f), CircleShape)
@@ -478,9 +409,7 @@ fun MediaExpandedCard(mediaInfo: MediaInfo) {
                 Icon(Icons.Filled.FastForward, contentDescription = "Next", tint = Color.White)
             }
         }
-        
         Spacer(modifier = Modifier.height(8.dp))
-        
         Slider(
             value = if (mediaInfo.duration > 0) mediaInfo.currentPosition.toFloat() / mediaInfo.duration else 0f,
             onValueChange = { progress -> 
@@ -488,7 +417,6 @@ fun MediaExpandedCard(mediaInfo: MediaInfo) {
             },
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
-                activeTrackColor = mediaInfo.dominantColor?.let { Color(it) } ?: Color.White,
                 inactiveTrackColor = Color.DarkGray
             ),
             modifier = Modifier.fillMaxWidth()
@@ -499,7 +427,7 @@ fun MediaExpandedCard(mediaInfo: MediaInfo) {
 @Composable
 fun EqualizerWave(isPlaying: Boolean, color: Color) {
     val barCount = 4
-    val heights = remember { mutableStateListOf(0.3f, 0.6f, 0.4f, 0.8f) }
+    val heights = remember { mutableStateListOf<Float>().apply { for(i in 0 until barCount) add(0.2f) } }
     
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
@@ -514,7 +442,7 @@ fun EqualizerWave(isPlaying: Boolean, color: Color) {
             }
         }
     }
-
+    
     Row(
         modifier = Modifier.height(16.dp),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
