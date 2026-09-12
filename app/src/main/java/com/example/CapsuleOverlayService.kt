@@ -22,6 +22,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -32,7 +33,7 @@ class CapsuleOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
     private var lifecycleHelper: OverlayLifecycleHelper? = null
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var stateJob: Job? = null
     
     private val batteryReceiver = BatteryReceiver()
@@ -108,7 +109,11 @@ class CapsuleOverlayService : Service() {
                         // Allow touches to pass through the empty area of the window
                     }
                     if (changed) {
-                        windowManager.updateViewLayout(view, params)
+                        try {
+                            windowManager.updateViewLayout(view, params)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                 }
             }
@@ -119,7 +124,11 @@ class CapsuleOverlayService : Service() {
                     val pxOffset = (xOffset * resources.displayMetrics.density).toInt()
                     if (params.x != pxOffset) {
                         params.x = pxOffset
-                        windowManager.updateViewLayout(view, params)
+                        try {
+                            windowManager.updateViewLayout(view, params)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                 }
             }
@@ -130,7 +139,11 @@ class CapsuleOverlayService : Service() {
                     val pyOffset = (yOffset * resources.displayMetrics.density).toInt()
                     if (params.y != pyOffset) {
                         params.y = pyOffset
-                        windowManager.updateViewLayout(view, params)
+                        try {
+                            windowManager.updateViewLayout(view, params)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                 }
             }

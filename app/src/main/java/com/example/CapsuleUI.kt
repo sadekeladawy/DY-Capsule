@@ -99,8 +99,8 @@ fun MainIsland(
     val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
     val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
 
-    val idleWidth = baseWidth.dp
-    val idleHeight = baseHeight.dp
+    val idleWidth = baseWidth.dp.coerceAtLeast(24.dp)
+    val idleHeight = baseHeight.dp.coerceAtLeast(24.dp)
 
     val targetWidth = when (state) {
         CapsuleState.IDLE -> idleWidth
@@ -151,12 +151,16 @@ fun MainIsland(
                 interpolator = OvershootInterpolator(0.8f)
                 addUpdateListener { anim ->
                     val fraction = anim.animatedFraction
-                    val newPxWidth = (startWidth + (pxTargetWidth - startWidth) * fraction).toInt()
-                    val newPxHeight = (startHeight + (pxTargetHeight - startHeight) * fraction).toInt()
+                    val newPxWidth = (startWidth + (pxTargetWidth - startWidth) * fraction).toInt().coerceAtLeast(1)
+                    val newPxHeight = (startHeight + (pxTargetHeight - startHeight) * fraction).toInt().coerceAtLeast(1)
                     
                     params.width = newPxWidth
                     params.height = newPxHeight
-                    windowManager.updateViewLayout(view, params)
+                    try {
+                        windowManager.updateViewLayout(view, params)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     
                     currentWidth = with(density) { newPxWidth.toDp() }
                     currentHeight = with(density) { newPxHeight.toDp() }
