@@ -29,7 +29,8 @@ class CapsuleNotificationListener : NotificationListenerService() {
             title = title,
             content = text,
             appIcon = smallIcon,
-            largeIcon = largeIcon
+            largeIcon = largeIcon,
+            contentIntent = notification.contentIntent
         )
 
         CapsuleStateManager.postNotification(info)

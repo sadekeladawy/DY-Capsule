@@ -90,6 +90,7 @@ fun MainIsland(
     notificationInfo: NotificationInfo?,
     batteryInfo: BatteryInfo
 ) {
+    val context = LocalContext.current
     val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
     val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
 
@@ -101,7 +102,8 @@ fun MainIsland(
         CapsuleState.MEDIA_PLAYING -> idleWidth + 80.dp
         CapsuleState.NOTIFICATION_POPUP -> idleWidth + 240.dp
         CapsuleState.CHARGING_EVENT -> idleWidth + 120.dp
-        CapsuleState.EXPANDED -> idleWidth + 240.dp
+        CapsuleState.EXPANDED_MEDIA -> idleWidth + 240.dp
+        CapsuleState.EXPANDED_NOTIFICATION -> idleWidth + 240.dp
     }
 
     val targetHeight = when (state) {
@@ -109,11 +111,13 @@ fun MainIsland(
         CapsuleState.MEDIA_PLAYING -> idleHeight
         CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
         CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
-        CapsuleState.EXPANDED -> idleHeight + 130.dp // Reduced from 170dp
+        CapsuleState.EXPANDED_MEDIA -> idleHeight + 130.dp
+        CapsuleState.EXPANDED_NOTIFICATION -> idleHeight + 80.dp
     }
 
     val cornerRadius = when (state) {
-        CapsuleState.EXPANDED -> 40.dp
+        CapsuleState.EXPANDED_MEDIA -> 40.dp
+        CapsuleState.EXPANDED_NOTIFICATION -> 40.dp
         CapsuleState.NOTIFICATION_POPUP -> 40.dp
         else -> 50.dp
     }
@@ -137,7 +141,8 @@ fun MainIsland(
     val outlineColor by animateColorAsState(
         targetValue = when (state) {
             CapsuleState.CHARGING_EVENT -> Color.Green.copy(alpha = 0.5f)
-            CapsuleState.EXPANDED -> dominantColor.copy(alpha = 0.5f)
+            CapsuleState.EXPANDED_MEDIA -> dominantColor.copy(alpha = 0.5f)
+            CapsuleState.EXPANDED_NOTIFICATION -> Color.White.copy(alpha = 0.2f)
             CapsuleState.NOTIFICATION_POPUP -> Color.White.copy(alpha = 0.2f)
             else -> Color.Transparent
         },
@@ -160,14 +165,35 @@ fun MainIsland(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = {
-                        if (state == CapsuleState.MEDIA_PLAYING || state == CapsuleState.NOTIFICATION_POPUP || state == CapsuleState.CHARGING_EVENT) {
-                            CapsuleStateManager.setState(CapsuleState.EXPANDED)
-                        } else if (state == CapsuleState.EXPANDED) {
-                            CapsuleStateManager.setState(CapsuleState.IDLE) 
+                        when (state) {
+                            CapsuleState.MEDIA_PLAYING -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                            CapsuleState.NOTIFICATION_POPUP -> CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
+                            CapsuleState.CHARGING_EVENT -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                            CapsuleState.EXPANDED_MEDIA -> {
+                                mediaInfo.packageName?.let { pkg ->
+                                    try {
+                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        if (intent != null) context.startActivity(intent)
+                                    } catch (e: Exception) { e.printStackTrace() }
+                                }
+                                CapsuleStateManager.setState(CapsuleState.IDLE)
+                            }
+                            CapsuleState.EXPANDED_NOTIFICATION -> {
+                                try {
+                                    notificationInfo?.contentIntent?.send()
+                                } catch (e: Exception) { e.printStackTrace() }
+                                CapsuleStateManager.setState(CapsuleState.IDLE)
+                            }
+                            else -> {}
                         }
                     },
                     onLongPress = {
-                        CapsuleStateManager.setState(CapsuleState.EXPANDED)
+                        if (state == CapsuleState.MEDIA_PLAYING || state == CapsuleState.CHARGING_EVENT) {
+                            CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                        } else if (state == CapsuleState.NOTIFICATION_POPUP) {
+                            CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
+                        }
                     }
                 )
             }
@@ -186,7 +212,8 @@ fun MainIsland(
                 CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
                 CapsuleState.MEDIA_PLAYING -> MediaPlayingMini(mediaInfo)
                 CapsuleState.NOTIFICATION_POPUP -> notificationInfo?.let { NotificationAlert(it) }
-                CapsuleState.EXPANDED -> MediaExpandedCard(mediaInfo)
+                CapsuleState.EXPANDED_MEDIA -> MediaExpandedCard(mediaInfo)
+                CapsuleState.EXPANDED_NOTIFICATION -> notificationInfo?.let { NotificationExpandedCard(it) }
             }
         }
     }
@@ -313,6 +340,48 @@ fun NotificationAlert(info: NotificationInfo) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Composable
+fun NotificationExpandedCard(info: NotificationInfo) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .padding(24.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val icon = info.largeIcon ?: info.appIcon
+            if (icon != null) {
+                Image(
+                    bitmap = icon.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = info.title,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = info.content,
+                    color = Color.LightGray,
+                    fontSize = 14.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

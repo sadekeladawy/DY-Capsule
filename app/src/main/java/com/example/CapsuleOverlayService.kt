@@ -92,7 +92,7 @@ class CapsuleOverlayService : Service() {
                     val view = composeView ?: return@collect
                     val params = view.layoutParams as WindowManager.LayoutParams
                     var changed = false
-                    if (state == CapsuleState.EXPANDED) {
+                    if (state == CapsuleState.EXPANDED_MEDIA || state == CapsuleState.EXPANDED_NOTIFICATION) {
                         if ((params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH) == 0) {
                             params.flags = params.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                             changed = true
@@ -140,7 +140,8 @@ class CapsuleOverlayService : Service() {
             }
             setOnTouchListener { _, event ->
                 if (event.action == android.view.MotionEvent.ACTION_OUTSIDE) {
-                    if (CapsuleStateManager.currentState.value == CapsuleState.EXPANDED) {
+                    val currentState = CapsuleStateManager.currentState.value
+                    if (currentState == CapsuleState.EXPANDED_MEDIA || currentState == CapsuleState.EXPANDED_NOTIFICATION) {
                         CapsuleStateManager.setState(CapsuleState.IDLE)
                         return@setOnTouchListener true
                     }
@@ -168,7 +169,7 @@ class CapsuleOverlayService : Service() {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = 0
             y = 0
             // Ensure the window spans into the status bar area

@@ -40,7 +40,7 @@ object CapsuleStateManager {
 
     fun setState(state: CapsuleState) {
         if (_currentState.value == CapsuleState.CHARGING_EVENT && state != CapsuleState.IDLE && state != CapsuleState.MEDIA_PLAYING) {
-            if (state != CapsuleState.EXPANDED) return
+            if (state != CapsuleState.EXPANDED_MEDIA && state != CapsuleState.EXPANDED_NOTIFICATION) return
         }
         _currentState.value = state
         reevaluateState()
@@ -53,7 +53,7 @@ object CapsuleStateManager {
 
     fun postNotification(info: NotificationInfo) {
         _notificationInfo.value = info
-        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED) {
+        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED_MEDIA && _currentState.value != CapsuleState.EXPANDED_NOTIFICATION) {
             _currentState.value = CapsuleState.NOTIFICATION_POPUP
             eventJob?.cancel()
             eventJob = scope.launch {
@@ -110,7 +110,7 @@ object CapsuleStateManager {
             return
         }
         
-        if (_currentState.value == CapsuleState.EXPANDED) {
+        if (_currentState.value == CapsuleState.EXPANDED_MEDIA || _currentState.value == CapsuleState.EXPANDED_NOTIFICATION) {
             return
         }
         

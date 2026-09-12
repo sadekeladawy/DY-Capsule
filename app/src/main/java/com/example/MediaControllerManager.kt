@@ -83,10 +83,10 @@ object MediaControllerManager {
         if (bitmap != null) {
             Palette.from(bitmap).generate { palette ->
                 val color = palette?.dominantSwatch?.rgb ?: palette?.vibrantSwatch?.rgb
-                updateState(title, artist, bitmap, isPlaying, duration, position, color)
+                updateState(title, artist, bitmap, isPlaying, duration, position, color, controller.packageName)
             }
         } else {
-            updateState(title, artist, null, isPlaying, duration, position, null)
+            updateState(title, artist, null, isPlaying, duration, position, null, controller.packageName)
         }
         
         if (isPlaying) {
@@ -99,7 +99,7 @@ object MediaControllerManager {
     private fun updateState(
         title: String, artist: String, bitmap: Bitmap?,
         isPlaying: Boolean, duration: Long, position: Long,
-        color: Int?
+        color: Int?, packageName: String?
     ) {
         CapsuleStateManager.updateMediaInfo(
             MediaInfo(
@@ -109,7 +109,8 @@ object MediaControllerManager {
                 albumArt = bitmap,
                 dominantColor = color,
                 duration = duration,
-                currentPosition = position
+                currentPosition = position,
+                packageName = packageName
             )
         )
     }
