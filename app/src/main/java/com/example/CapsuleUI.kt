@@ -60,15 +60,6 @@ fun CapsuleUI() {
     val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
 
-    if (state == CapsuleState.CALIBRATION_MODE) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Red, RoundedCornerShape(percent = 50))
-        )
-        return
-    }
-
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
     Box(
@@ -108,7 +99,6 @@ fun MainIsland(
 
     val targetWidth = when (state) {
         CapsuleState.IDLE -> idleWidth
-        CapsuleState.CALIBRATION_MODE -> idleWidth
         CapsuleState.MEDIA_PLAYING -> idleWidth + 80.dp
         CapsuleState.NOTIFICATION_POPUP -> idleWidth + 240.dp
         CapsuleState.CHARGING_EVENT -> idleWidth + 120.dp
@@ -118,7 +108,6 @@ fun MainIsland(
 
     val targetHeight = when (state) {
         CapsuleState.IDLE -> idleHeight
-        CapsuleState.CALIBRATION_MODE -> idleHeight
         CapsuleState.MEDIA_PLAYING -> idleHeight
         CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
         CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
@@ -130,7 +119,6 @@ fun MainIsland(
         CapsuleState.EXPANDED_MEDIA -> 40.dp
         CapsuleState.EXPANDED_NOTIFICATION -> 40.dp
         CapsuleState.NOTIFICATION_POPUP -> 40.dp
-        CapsuleState.CALIBRATION_MODE -> (baseHeight / 2).dp
         else -> 50.dp
     }
 
@@ -173,7 +161,7 @@ fun MainIsland(
 
     val interactionSource = remember { MutableInteractionSource() }
     val bgColor by animateColorAsState(
-        targetValue = if (state == CapsuleState.CALIBRATION_MODE) Color.Red else Color.Black.copy(alpha = 1f),
+        targetValue = Color.Black.copy(alpha = 1f),
         animationSpec = spring(stiffness = Spring.StiffnessLow)
     )
 
@@ -182,7 +170,7 @@ fun MainIsland(
             .width(animatedWidth.value)
             .height(animatedHeight.value)
             .shadow(
-                elevation = if (state == CapsuleState.IDLE || state == CapsuleState.CALIBRATION_MODE) 0.dp else 24.dp,
+                elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner.value),
                 ambientColor = outlineColor,
                 spotColor = outlineColor
@@ -226,7 +214,7 @@ fun MainIsland(
             },
         contentAlignment = Alignment.Center
     ) {
-        if (state != CapsuleState.IDLE && state != CapsuleState.CALIBRATION_MODE) {
+        if (state != CapsuleState.IDLE) {
             when (state) {
                 CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
                 CapsuleState.MEDIA_PLAYING -> MediaPlayingMini(mediaInfo)

@@ -56,12 +56,12 @@ fun MainScreen() {
     var hasNotificationPermission by remember { mutableStateOf(checkNotificationListenerPermission(context)) }
     var hasPostNotificationPermission by remember { mutableStateOf(checkPostNotificationsPermission(context)) }
     
-    var isCalibrating by remember { mutableStateOf(false) }
+    var isSettingsOpen by remember { mutableStateOf(false) }
 
     val isSplitEnabled by CapsulePreferencesRepository.isSplitIslandEnabled(context).collectAsState(initial = true)
 
-    if (isCalibrating) {
-        CalibrationSetupScreen(onFinish = { isCalibrating = false })
+    if (isSettingsOpen) {
+        CapsuleSettingsScreen(onFinish = { isSettingsOpen = false })
         return
     }
 
@@ -270,12 +270,12 @@ fun MainScreen() {
                 }
 
                 Button(
-                    onClick = { isCalibrating = true },
+                    onClick = { isSettingsOpen = true },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    Text("Calibrate Camera Cutout")
+                    Text("Capsule Settings")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

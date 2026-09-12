@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun CalibrationSetupScreen(onFinish: () -> Unit) {
+fun CapsuleSettingsScreen(onFinish: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
@@ -38,7 +38,6 @@ fun CalibrationSetupScreen(onFinish: () -> Unit) {
         } else {
             context.startService(intent)
         }
-        CapsuleStateManager.setState(CapsuleState.CALIBRATION_MODE)
         
         onDispose {
             CapsuleStateManager.setState(CapsuleState.IDLE)
@@ -53,47 +52,11 @@ fun CalibrationSetupScreen(onFinish: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Camera Cutout Calibration",
+            text = "Capsule Settings",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         )
-
-        // Instruction Header
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp, 60.dp)
-                        .background(Color.DarkGray, RoundedCornerShape(30.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .background(Color.Black, CircleShape)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .background(Color.Red.copy(alpha = 0.5f), CircleShape)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Place the red circle directly under the camera cutout. It should be invisible.",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
-        }
 
         CalibrationRow(
             title = "X Position",

@@ -9,8 +9,7 @@ enum class CapsuleState {
     NOTIFICATION_POPUP,
     EXPANDED_MEDIA,
     EXPANDED_NOTIFICATION,
-    CHARGING_EVENT,
-    CALIBRATION_MODE
+    CHARGING_EVENT
 }
 
 data class MediaInfo(

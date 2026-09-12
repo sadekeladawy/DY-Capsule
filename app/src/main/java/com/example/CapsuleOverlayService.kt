@@ -11,6 +11,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
@@ -93,26 +94,21 @@ class CapsuleOverlayService : Service() {
                     val params = view.layoutParams as WindowManager.LayoutParams
                     var changed = false
                     
-                    if (state == CapsuleState.CALIBRATION_MODE) {
-                        params.width = CapsuleStateManager.baseWidth.value
-                        params.height = CapsuleStateManager.baseHeight.value
-                        changed = true
-                    } else if (params.width != WindowManager.LayoutParams.WRAP_CONTENT || params.height != WindowManager.LayoutParams.WRAP_CONTENT) {
+                    if (params.width != WindowManager.LayoutParams.WRAP_CONTENT || params.height != WindowManager.LayoutParams.WRAP_CONTENT) {
                         params.width = WindowManager.LayoutParams.WRAP_CONTENT
                         params.height = WindowManager.LayoutParams.WRAP_CONTENT
                         changed = true
                     }
                     
                     if (state == CapsuleState.EXPANDED_MEDIA || state == CapsuleState.EXPANDED_NOTIFICATION) {
-                        if ((params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH) == 0) {
-                            params.flags = params.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                        if ((params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) != 0) {
+                            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                             changed = true
                         }
                     } else {
-                        if ((params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH) != 0) {
-                            params.flags = params.flags and WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH.inv()
-                            changed = true
-                        }
+                        // Allow touches to pass through the empty area of the WRAP_CONTENT window
+                        // For touchable idle pill, we cannot use FLAG_NOT_TOUCHABLE on the entire window
+                        // Instead, we keep the window touchable but rely on Compose's clickable
                     }
                     if (changed) {
                         windowManager.updateViewLayout(view, params)
@@ -123,8 +119,9 @@ class CapsuleOverlayService : Service() {
                 CapsuleStateManager.capsuleXOffset.collect { xOffset ->
                     val view = composeView ?: return@collect
                     val params = view.layoutParams as WindowManager.LayoutParams
-                    if (params.x != xOffset) {
-                        params.x = xOffset
+                    val pxOffset = (xOffset * resources.displayMetrics.density).toInt()
+                    if (params.x != pxOffset) {
+                        params.x = pxOffset
                         windowManager.updateViewLayout(view, params)
                     }
                 }
@@ -133,28 +130,9 @@ class CapsuleOverlayService : Service() {
                 CapsuleStateManager.capsuleYOffset.collect { yOffset ->
                     val view = composeView ?: return@collect
                     val params = view.layoutParams as WindowManager.LayoutParams
-                    if (params.y != yOffset) {
-                        params.y = yOffset
-                        windowManager.updateViewLayout(view, params)
-                    }
-                }
-            }
-            launch {
-                CapsuleStateManager.baseWidth.collect { width ->
-                    if (CapsuleStateManager.currentState.value == CapsuleState.CALIBRATION_MODE) {
-                        val view = composeView ?: return@collect
-                        val params = view.layoutParams as WindowManager.LayoutParams
-                        params.width = width
-                        windowManager.updateViewLayout(view, params)
-                    }
-                }
-            }
-            launch {
-                CapsuleStateManager.baseHeight.collect { height ->
-                    if (CapsuleStateManager.currentState.value == CapsuleState.CALIBRATION_MODE) {
-                        val view = composeView ?: return@collect
-                        val params = view.layoutParams as WindowManager.LayoutParams
-                        params.height = height
+                    val pyOffset = (yOffset * resources.displayMetrics.density).toInt()
+                    if (params.y != pyOffset) {
+                        params.y = pyOffset
                         windowManager.updateViewLayout(view, params)
                     }
                 }
@@ -208,16 +186,20 @@ class CapsuleOverlayService : Service() {
             start()
         }
 
+        val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+        
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                WindowManager.LayoutParams.TYPE_PHONE,
+            overlayType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -225,8 +207,17 @@ class CapsuleOverlayService : Service() {
             y = 0
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
+        
+        if (!Settings.canDrawOverlays(this)) {
+            // Cannot add overlay window without permission
+            return
+        }
 
-        windowManager.addView(composeView, params)
+        try {
+            windowManager.addView(composeView, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onDestroy() {
