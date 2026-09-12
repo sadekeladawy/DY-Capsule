@@ -208,12 +208,12 @@ fun MainIsland(
             .size(currentWidth, currentHeight)
             .shadow(
                 elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
-                shape = RoundedCornerShape(animatedCorner.value),
+                shape = RoundedCornerShape(animatedCorner.value.coerceAtLeast(0.dp)),
                 ambientColor = outlineColor,
                 spotColor = outlineColor
             )
-            .background(bgColor, RoundedCornerShape(animatedCorner.value))
-            .clip(RoundedCornerShape(animatedCorner.value))
+            .background(bgColor, RoundedCornerShape(animatedCorner.value.coerceAtLeast(0.dp)))
+            .clip(RoundedCornerShape(animatedCorner.value.coerceAtLeast(0.dp)))
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
