@@ -171,6 +171,8 @@ class CapsuleOverlayService : Service() {
             gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
+            // Ensure the window spans into the status bar area
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
 
         windowManager.addView(composeView, params)

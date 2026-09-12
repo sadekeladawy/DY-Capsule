@@ -109,7 +109,7 @@ fun MainIsland(
         CapsuleState.MEDIA_PLAYING -> idleHeight
         CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
         CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
-        CapsuleState.EXPANDED -> idleHeight + 170.dp
+        CapsuleState.EXPANDED -> idleHeight + 130.dp // Reduced from 170dp
     }
 
     val cornerRadius = when (state) {
@@ -120,17 +120,17 @@ fun MainIsland(
 
     val animatedWidth by animateDpAsState(
         targetValue = targetWidth,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
     )
 
     val animatedHeight by animateDpAsState(
         targetValue = targetHeight,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
     )
 
     val animatedCorner by animateDpAsState(
         targetValue = cornerRadius,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
     )
 
     val dominantColor = mediaInfo.dominantColor?.let { Color(it) } ?: Color.DarkGray
@@ -148,13 +148,14 @@ fun MainIsland(
         modifier = Modifier
             .width(animatedWidth)
             .height(animatedHeight)
+            .heightIn(max = 160.dp)
             .shadow(
                 elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner),
                 ambientColor = outlineColor,
                 spotColor = outlineColor
             )
-            .background(Color.Black, RoundedCornerShape(animatedCorner))
+            .background(Color.Black.copy(alpha = 1f), RoundedCornerShape(animatedCorner))
             .clip(RoundedCornerShape(animatedCorner))
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -218,7 +219,8 @@ fun SecondaryIsland(mediaInfo: MediaInfo) {
 fun ChargingAnimation(batteryInfo: BatteryInfo) {
     Row(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .wrapContentHeight()
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -251,7 +253,8 @@ fun ChargingAnimation(batteryInfo: BatteryInfo) {
 fun MediaPlayingMini(mediaInfo: MediaInfo) {
     Row(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .wrapContentHeight()
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -277,7 +280,8 @@ fun MediaPlayingMini(mediaInfo: MediaInfo) {
 fun NotificationAlert(info: NotificationInfo) {
     Row(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .wrapContentHeight()
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -317,7 +321,8 @@ fun NotificationAlert(info: NotificationInfo) {
 fun MediaExpandedCard(mediaInfo: MediaInfo) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .wrapContentHeight()
             .padding(24.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -352,7 +357,7 @@ fun MediaExpandedCard(mediaInfo: MediaInfo) {
             EqualizerWave(isPlaying = mediaInfo.isPlaying, color = mediaInfo.dominantColor?.let { Color(it) } ?: Color.White)
         }
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(16.dp))
         
         Row(
             modifier = Modifier.fillMaxWidth(),
