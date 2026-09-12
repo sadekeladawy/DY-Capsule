@@ -1,5 +1,8 @@
 package com.example
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -57,17 +60,6 @@ fun CapsuleUI() {
     val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
     val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
 
-    if (state == CapsuleState.CALIBRATION_MODE) {
-        val width by CapsuleStateManager.baseWidth.collectAsState()
-        val height by CapsuleStateManager.baseHeight.collectAsState()
-        Box(
-            modifier = Modifier
-                .size(width.dp, height.dp)
-                .background(Color.Red, RoundedCornerShape(percent = 50))
-        )
-        return
-    }
-
     val showSplitPill = mediaInfo.isPlaying && (state == CapsuleState.CHARGING_EVENT || state == CapsuleState.NOTIFICATION_POPUP) && isSplitEnabled
 
     Box(
@@ -75,8 +67,7 @@ fun CapsuleUI() {
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.padding(top = 8.dp)
+            verticalAlignment = Alignment.Top
         ) {
             MainIsland(
                 state = state, 
@@ -134,15 +125,30 @@ fun MainIsland(
         else -> 50.dp
     }
 
-    val animatedWidth by animateDpAsState(
-        targetValue = targetWidth,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-    )
+    val animatedWidth = remember { Animatable(targetWidth, Dp.VectorConverter) }
+    val animatedHeight = remember { Animatable(targetHeight, Dp.VectorConverter) }
+    val animatedCorner = remember { Animatable(cornerRadius, Dp.VectorConverter) }
 
-    val animatedCorner by animateDpAsState(
-        targetValue = cornerRadius,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-    )
+    LaunchedEffect(targetWidth) {
+        animatedWidth.animateTo(
+            targetValue = targetWidth,
+            animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+        )
+    }
+
+    LaunchedEffect(targetHeight) {
+        animatedHeight.animateTo(
+            targetValue = targetHeight,
+            animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+        )
+    }
+
+    LaunchedEffect(cornerRadius) {
+        animatedCorner.animateTo(
+            targetValue = cornerRadius,
+            animationSpec = spring(dampingRatio = 0.65f, stiffness = 300f)
+        )
+    }
 
     val dominantColor = mediaInfo.dominantColor?.let { Color(it) } ?: Color.DarkGray
     val outlineColor by animateColorAsState(
@@ -157,25 +163,23 @@ fun MainIsland(
     )
 
     val interactionSource = remember { MutableInteractionSource() }
-    val bgColor = if (state == CapsuleState.CALIBRATION_MODE) Color.Red else Color.Black.copy(alpha = 1f)
+    val bgColor by animateColorAsState(
+        targetValue = if (state == CapsuleState.CALIBRATION_MODE) Color.Red else Color.Black.copy(alpha = 1f),
+        animationSpec = spring(stiffness = Spring.StiffnessLow)
+    )
 
     Box(
         modifier = Modifier
-            .width(animatedWidth)
-            .defaultMinSize(minHeight = idleHeight)
-            .heightIn(max = 200.dp)
-            .wrapContentHeight()
-            .animateContentSize(
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            )
+            .width(animatedWidth.value)
+            .height(animatedHeight.value)
             .shadow(
                 elevation = if (state == CapsuleState.IDLE || state == CapsuleState.CALIBRATION_MODE) 0.dp else 24.dp,
-                shape = RoundedCornerShape(animatedCorner),
+                shape = RoundedCornerShape(animatedCorner.value),
                 ambientColor = outlineColor,
                 spotColor = outlineColor
             )
-            .background(bgColor, RoundedCornerShape(animatedCorner))
-            .clip(RoundedCornerShape(animatedCorner))
+            .background(bgColor, RoundedCornerShape(animatedCorner.value))
+            .clip(RoundedCornerShape(animatedCorner.value))
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
