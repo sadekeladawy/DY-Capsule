@@ -24,17 +24,17 @@ object CapsuleStateManager {
     private val _batteryInfo = MutableStateFlow(BatteryInfo())
     val batteryInfo: StateFlow<BatteryInfo> = _batteryInfo.asStateFlow()
 
-    private val _capsuleXOffset = MutableStateFlow(0f)
-    val capsuleXOffset: StateFlow<Float> = _capsuleXOffset.asStateFlow()
+    private val _capsuleXOffset = MutableStateFlow(0)
+    val capsuleXOffset: StateFlow<Int> = _capsuleXOffset.asStateFlow()
 
-    private val _capsuleYOffset = MutableStateFlow(0f)
-    val capsuleYOffset: StateFlow<Float> = _capsuleYOffset.asStateFlow()
+    private val _capsuleYOffset = MutableStateFlow(0)
+    val capsuleYOffset: StateFlow<Int> = _capsuleYOffset.asStateFlow()
 
-    private val _baseWidth = MutableStateFlow(100f)
-    val baseWidth: StateFlow<Float> = _baseWidth.asStateFlow()
+    private val _baseWidth = MutableStateFlow(100)
+    val baseWidth: StateFlow<Int> = _baseWidth.asStateFlow()
 
-    private val _baseHeight = MutableStateFlow(30f)
-    val baseHeight: StateFlow<Float> = _baseHeight.asStateFlow()
+    private val _baseHeight = MutableStateFlow(30)
+    val baseHeight: StateFlow<Int> = _baseHeight.asStateFlow()
 
     private var eventJob: Job? = null
 
@@ -53,7 +53,7 @@ object CapsuleStateManager {
 
     fun postNotification(info: NotificationInfo) {
         _notificationInfo.value = info
-        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED_MEDIA && _currentState.value != CapsuleState.EXPANDED_NOTIFICATION) {
+        if (_currentState.value != CapsuleState.CHARGING_EVENT && _currentState.value != CapsuleState.EXPANDED_MEDIA && _currentState.value != CapsuleState.EXPANDED_NOTIFICATION && _currentState.value != CapsuleState.CALIBRATION) {
             _currentState.value = CapsuleState.NOTIFICATION_POPUP
             eventJob?.cancel()
             eventJob = scope.launch {
@@ -71,7 +71,7 @@ object CapsuleStateManager {
 
     fun updateBatteryInfo(info: BatteryInfo, connected: Boolean = false) {
         _batteryInfo.value = info
-        if (connected) {
+        if (connected && _currentState.value != CapsuleState.CALIBRATION) {
             _currentState.value = CapsuleState.CHARGING_EVENT
             eventJob?.cancel()
             eventJob = scope.launch {
@@ -81,19 +81,19 @@ object CapsuleStateManager {
         }
     }
 
-    fun setXOffset(offset: Float) {
+    fun setXOffset(offset: Int) {
         _capsuleXOffset.value = offset
     }
 
-    fun setYOffset(offset: Float) {
+    fun setYOffset(offset: Int) {
         _capsuleYOffset.value = offset
     }
 
-    fun setBaseWidth(width: Float) {
+    fun setBaseWidth(width: Int) {
         _baseWidth.value = width
     }
 
-    fun setBaseHeight(height: Float) {
+    fun setBaseHeight(height: Int) {
         _baseHeight.value = height
     }
 
@@ -106,6 +106,10 @@ object CapsuleStateManager {
     }
     
     private fun reevaluateState(forceClearCharging: Boolean = false) {
+        if (_currentState.value == CapsuleState.CALIBRATION) {
+            return
+        }
+
         if (_currentState.value == CapsuleState.CHARGING_EVENT && !forceClearCharging) {
             return
         }

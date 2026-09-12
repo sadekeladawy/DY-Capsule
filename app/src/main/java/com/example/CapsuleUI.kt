@@ -35,6 +35,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +69,7 @@ fun CapsuleUI() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top,
             modifier = Modifier
-                .offset { androidx.compose.ui.unit.IntOffset(xOffset.toInt(), 0) }
+                .offset { androidx.compose.ui.unit.IntOffset(xOffset, 0) }
                 .padding(top = 8.dp)
         ) {
             MainIsland(
@@ -99,6 +102,7 @@ fun MainIsland(
 
     val targetWidth = when (state) {
         CapsuleState.IDLE -> idleWidth
+        CapsuleState.CALIBRATION -> idleWidth
         CapsuleState.MEDIA_PLAYING -> idleWidth + 80.dp
         CapsuleState.NOTIFICATION_POPUP -> idleWidth + 240.dp
         CapsuleState.CHARGING_EVENT -> idleWidth + 120.dp
@@ -108,6 +112,7 @@ fun MainIsland(
 
     val targetHeight = when (state) {
         CapsuleState.IDLE -> idleHeight
+        CapsuleState.CALIBRATION -> idleHeight
         CapsuleState.MEDIA_PLAYING -> idleHeight
         CapsuleState.NOTIFICATION_POPUP -> idleHeight + 50.dp
         CapsuleState.CHARGING_EVENT -> idleHeight + 10.dp
@@ -119,16 +124,12 @@ fun MainIsland(
         CapsuleState.EXPANDED_MEDIA -> 40.dp
         CapsuleState.EXPANDED_NOTIFICATION -> 40.dp
         CapsuleState.NOTIFICATION_POPUP -> 40.dp
+        CapsuleState.CALIBRATION -> (baseHeight / 2).dp
         else -> 50.dp
     }
 
     val animatedWidth by animateDpAsState(
         targetValue = targetWidth,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-    )
-
-    val animatedHeight by animateDpAsState(
-        targetValue = targetHeight,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
     )
 
@@ -149,54 +150,54 @@ fun MainIsland(
         animationSpec = spring(stiffness = Spring.StiffnessLow)
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val bgColor = if (state == CapsuleState.CALIBRATION) Color.Red else Color.Black.copy(alpha = 1f)
+
     Box(
         modifier = Modifier
             .width(animatedWidth)
-            .height(animatedHeight)
-            .heightIn(max = 160.dp)
+            .defaultMinSize(minHeight = idleHeight)
+            .heightIn(max = 200.dp)
+            .wrapContentHeight()
+            .animateContentSize(
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+            )
             .shadow(
-                elevation = if (state == CapsuleState.IDLE) 0.dp else 24.dp,
+                elevation = if (state == CapsuleState.IDLE || state == CapsuleState.CALIBRATION) 0.dp else 24.dp,
                 shape = RoundedCornerShape(animatedCorner),
                 ambientColor = outlineColor,
                 spotColor = outlineColor
             )
-            .background(Color.Black.copy(alpha = 1f), RoundedCornerShape(animatedCorner))
+            .background(bgColor, RoundedCornerShape(animatedCorner))
             .clip(RoundedCornerShape(animatedCorner))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        when (state) {
-                            CapsuleState.MEDIA_PLAYING -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
-                            CapsuleState.NOTIFICATION_POPUP -> CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
-                            CapsuleState.CHARGING_EVENT -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
-                            CapsuleState.EXPANDED_MEDIA -> {
-                                mediaInfo.packageName?.let { pkg ->
-                                    try {
-                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        if (intent != null) context.startActivity(intent)
-                                    } catch (e: Exception) { e.printStackTrace() }
-                                }
-                                CapsuleStateManager.setState(CapsuleState.IDLE)
-                            }
-                            CapsuleState.EXPANDED_NOTIFICATION -> {
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    when (state) {
+                        CapsuleState.MEDIA_PLAYING -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                        CapsuleState.NOTIFICATION_POPUP -> CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
+                        CapsuleState.CHARGING_EVENT -> CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
+                        CapsuleState.EXPANDED_MEDIA -> {
+                            mediaInfo.packageName?.let { pkg ->
                                 try {
-                                    notificationInfo?.contentIntent?.send()
+                                    val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                    intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    if (intent != null) context.startActivity(intent)
                                 } catch (e: Exception) { e.printStackTrace() }
-                                CapsuleStateManager.setState(CapsuleState.IDLE)
                             }
-                            else -> {}
+                            CapsuleStateManager.setState(CapsuleState.IDLE)
                         }
-                    },
-                    onLongPress = {
-                        if (state == CapsuleState.MEDIA_PLAYING || state == CapsuleState.CHARGING_EVENT) {
-                            CapsuleStateManager.setState(CapsuleState.EXPANDED_MEDIA)
-                        } else if (state == CapsuleState.NOTIFICATION_POPUP) {
-                            CapsuleStateManager.setState(CapsuleState.EXPANDED_NOTIFICATION)
+                        CapsuleState.EXPANDED_NOTIFICATION -> {
+                            try {
+                                notificationInfo?.contentIntent?.send()
+                            } catch (e: Exception) { e.printStackTrace() }
+                            CapsuleStateManager.setState(CapsuleState.IDLE)
                         }
+                        else -> {}
                     }
-                )
-            }
+                }
+            )
             .pointerInput(Unit) {
                 detectDragGestures { _, dragAmount ->
                     if (dragAmount.y < -20) {
@@ -209,6 +210,7 @@ fun MainIsland(
         Crossfade(targetState = state, label = "CapsuleContent") { currentState ->
             when (currentState) {
                 CapsuleState.IDLE -> {}
+                CapsuleState.CALIBRATION -> {}
                 CapsuleState.CHARGING_EVENT -> ChargingAnimation(batteryInfo)
                 CapsuleState.MEDIA_PLAYING -> MediaPlayingMini(mediaInfo)
                 CapsuleState.NOTIFICATION_POPUP -> notificationInfo?.let { NotificationAlert(it) }

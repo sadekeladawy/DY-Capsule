@@ -5,7 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -13,30 +13,30 @@ import kotlinx.coroutines.flow.map
 val Context.preferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "capsule_calibration_settings")
 
 object CapsulePreferencesRepository {
-    private val X_OFFSET = floatPreferencesKey("x_offset")
-    private val Y_OFFSET = floatPreferencesKey("y_offset")
-    private val SCALE_WIDTH = floatPreferencesKey("scale_width")
-    private val SCALE_HEIGHT = floatPreferencesKey("scale_height")
+    private val X_POS = intPreferencesKey("x_pos")
+    private val Y_POS = intPreferencesKey("y_pos")
+    private val CAPSULE_WIDTH = intPreferencesKey("capsule_width")
+    private val CAPSULE_HEIGHT = intPreferencesKey("capsule_height")
     private val SPLIT_ISLAND_ENABLED = booleanPreferencesKey("split_island_enabled")
     
-    fun getXOffset(context: Context): Flow<Float> = context.preferencesDataStore.data.map { it[X_OFFSET] ?: 0f }
-    suspend fun setXOffset(context: Context, offset: Float) {
-        context.preferencesDataStore.edit { it[X_OFFSET] = offset }
+    fun getXOffset(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[X_POS] ?: 0 }
+    suspend fun setXOffset(context: Context, offset: Int) {
+        context.preferencesDataStore.edit { it[X_POS] = offset }
     }
 
-    fun getYOffset(context: Context): Flow<Float> = context.preferencesDataStore.data.map { it[Y_OFFSET] ?: 50f }
-    suspend fun setYOffset(context: Context, offset: Float) {
-        context.preferencesDataStore.edit { it[Y_OFFSET] = offset }
+    fun getYOffset(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[Y_POS] ?: 50 }
+    suspend fun setYOffset(context: Context, offset: Int) {
+        context.preferencesDataStore.edit { it[Y_POS] = offset }
     }
 
-    fun getScaleWidth(context: Context): Flow<Float> = context.preferencesDataStore.data.map { it[SCALE_WIDTH] ?: 120f }
-    suspend fun setScaleWidth(context: Context, width: Float) {
-        context.preferencesDataStore.edit { it[SCALE_WIDTH] = width }
+    fun getScaleWidth(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CAPSULE_WIDTH] ?: 120 }
+    suspend fun setScaleWidth(context: Context, width: Int) {
+        context.preferencesDataStore.edit { it[CAPSULE_WIDTH] = width }
     }
 
-    fun getScaleHeight(context: Context): Flow<Float> = context.preferencesDataStore.data.map { it[SCALE_HEIGHT] ?: 36f }
-    suspend fun setScaleHeight(context: Context, height: Float) {
-        context.preferencesDataStore.edit { it[SCALE_HEIGHT] = height }
+    fun getScaleHeight(context: Context): Flow<Int> = context.preferencesDataStore.data.map { it[CAPSULE_HEIGHT] ?: 36 }
+    suspend fun setScaleHeight(context: Context, height: Int) {
+        context.preferencesDataStore.edit { it[CAPSULE_HEIGHT] = height }
     }
 
     fun isSplitIslandEnabled(context: Context): Flow<Boolean> = context.preferencesDataStore.data.map { it[SPLIT_ISLAND_ENABLED] ?: true }

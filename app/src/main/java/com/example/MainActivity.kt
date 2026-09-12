@@ -56,11 +56,14 @@ fun MainScreen() {
     var hasNotificationPermission by remember { mutableStateOf(checkNotificationListenerPermission(context)) }
     var hasPostNotificationPermission by remember { mutableStateOf(checkPostNotificationsPermission(context)) }
     
-    val xOffset by CapsuleStateManager.capsuleXOffset.collectAsState()
-    val yOffset by CapsuleStateManager.capsuleYOffset.collectAsState()
-    val baseWidth by CapsuleStateManager.baseWidth.collectAsState()
-    val baseHeight by CapsuleStateManager.baseHeight.collectAsState()
+    var isCalibrating by remember { mutableStateOf(false) }
+
     val isSplitEnabled by CapsulePreferencesRepository.isSplitIslandEnabled(context).collectAsState(initial = true)
+
+    if (isCalibrating) {
+        CalibrationSetupScreen(onFinish = { isCalibrating = false })
+        return
+    }
 
     LaunchedEffect(Unit) {
         val initialX = CapsulePreferencesRepository.getXOffset(context).first()
@@ -266,57 +269,14 @@ fun MainScreen() {
                     )
                 }
 
-                Text("Capsule X-Offset", fontWeight = FontWeight.Bold)
-                Slider(
-                    value = xOffset,
-                    onValueChange = { CapsuleStateManager.setXOffset(it) },
-                    onValueChangeFinished = {
-                        coroutineScope.launch {
-                            CapsulePreferencesRepository.setXOffset(context, xOffset)
-                        }
-                    },
-                    valueRange = -500f..500f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Capsule Y-Offset", fontWeight = FontWeight.Bold)
-                Slider(
-                    value = yOffset,
-                    onValueChange = { CapsuleStateManager.setYOffset(it) },
-                    onValueChangeFinished = {
-                        coroutineScope.launch {
-                            CapsulePreferencesRepository.setYOffset(context, yOffset)
-                        }
-                    },
-                    valueRange = 0f..200f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Base Width", fontWeight = FontWeight.Bold)
-                Slider(
-                    value = baseWidth,
-                    onValueChange = { CapsuleStateManager.setBaseWidth(it) },
-                    onValueChangeFinished = {
-                        coroutineScope.launch {
-                            CapsulePreferencesRepository.setScaleWidth(context, baseWidth)
-                        }
-                    },
-                    valueRange = 50f..300f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Base Height", fontWeight = FontWeight.Bold)
-                Slider(
-                    value = baseHeight,
-                    onValueChange = { CapsuleStateManager.setBaseHeight(it) },
-                    onValueChangeFinished = {
-                        coroutineScope.launch {
-                            CapsulePreferencesRepository.setScaleHeight(context, baseHeight)
-                        }
-                    },
-                    valueRange = 20f..100f,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Button(
+                    onClick = { isCalibrating = true },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Calibrate Camera Cutout")
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
